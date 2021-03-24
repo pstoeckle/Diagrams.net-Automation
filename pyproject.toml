@@ -15,4 +15,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-diagrams-net-automation = 'diagrams_net_automation.main:convert_diagrams'
+diagrams-net-automation = 'diagrams_net_automation.main:main_group'
