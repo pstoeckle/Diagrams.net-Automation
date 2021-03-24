@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "diagrams-net-automation"
+version = "0.1.0"
+description = ""
+authors = ["Patrick Stoeckle <patrick.stoeckle@tum.de>"]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+click = "^7.1.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+diagrams-net-automation = 'diagrams_net_automation.main:convert_diagrams'
