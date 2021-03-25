@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "diagrams-net-automation"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Patrick Stoeckle <patrick.stoeckle@tum.de>"]
 
