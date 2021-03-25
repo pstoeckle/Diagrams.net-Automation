@@ -1,19 +1,22 @@
 """
 Convert.
 """
+from hashlib import sha3_256
+from json import dump, load
 from logging import INFO, basicConfig, getLogger
 from pathlib import Path as pathlib_Path
 from shutil import rmtree
 from subprocess import call
 from sys import stdout
-from typing import Any
+from typing import Any, MutableMapping
 
-from click import Context, Path, command, echo, option, group
+from click import Context, Path, command, echo, group, option
 
 from diagrams_net_automation import __version__
 
 DRAW_IO = "/Applications/draw.io.app/Contents/MacOS/draw.io"
 
+CACHE_FILE = ".diagrams.net.json"
 
 _LOGGER = getLogger(__name__)
 basicConfig(
@@ -79,9 +82,9 @@ def convert_diagrams(input_directory: str, output_directory: str, draw_io: str) 
     """
     input_directory_path = pathlib_Path(input_directory)
     output_directory_path = pathlib_Path(output_directory)
-    if output_directory_path.is_dir():
-        rmtree(output_directory)
-    output_directory_path.mkdir()
+    _setup_output_directory(output_directory_path)
+    cache_file = input_directory_path.joinpath(CACHE_FILE)
+    content = _load_cache(cache_file)
     files = input_directory_path.iterdir()
     files = [
         f
@@ -90,29 +93,74 @@ def convert_diagrams(input_directory: str, output_directory: str, draw_io: str) 
         and (f.suffix.casefold() == ".xml" or f.suffix.casefold() == ".drawio")
     ]
     for file in files:
-        _LOGGER.info(file)
-        new_pdf_file = output_directory_path.joinpath(file.stem + ".pdf")
-        new_png_file = output_directory_path.joinpath(file.stem + ".png")
-        call(
-            [
-                draw_io,
-                file,
-                "--export",
-                "--output",
-                new_pdf_file,
-                "--crop",
-            ]
-        )
-        call(
-            [
-                draw_io,
-                file,
-                "--export",
-                "--output",
-                new_png_file,
-                "--transparent",
-            ]
-        )
+        _convert_file(content, draw_io, file, output_directory_path)
+    with cache_file.open("w") as f_write:
+        dump(content, f_write, indent=4)
+
+
+def _convert_file(
+    cache_content: MutableMapping[str, str],
+    draw_io: str,
+    file: pathlib_Path,
+    output_directory_path: pathlib_Path,
+) -> None:
+    file_hash = hash_file(file)
+    if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
+        _LOGGER.info(f"The file {file} has not changed since the last conversion.")
+        return
+    new_pdf_file = output_directory_path.joinpath(file.stem + ".pdf")
+    new_png_file = output_directory_path.joinpath(file.stem + ".png")
+    _LOGGER.info(f"Convert {file} to PDF")
+    call(
+        [
+            draw_io,
+            file,
+            "--export",
+            "--output",
+            new_pdf_file,
+            "--crop",
+        ]
+    )
+    _LOGGER.info(f"Convert {file} to PNG")
+    call(
+        [
+            draw_io,
+            file,
+            "--export",
+            "--output",
+            new_png_file,
+            "--transparent",
+        ]
+    )
+    cache_content[str(file)] = file_hash
+
+
+def _load_cache(cache_file: pathlib_Path) -> MutableMapping[str, str]:
+    content: MutableMapping[str, str]
+    if cache_file.is_file():
+        with cache_file.open() as f_read:
+            content = load(f_read)
+    else:
+        content = {}
+    return content
+
+
+def _setup_output_directory(output_directory_path: pathlib_Path) -> None:
+    if not output_directory_path.is_dir():
+        output_directory_path.mkdir()
+
+
+def hash_file(file: pathlib_Path) -> str:
+    """
+    Tp.
+    """
+    if not file.is_file():
+        return ""
+    current_sha = sha3_256()
+    with file.open("rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            current_sha.update(chunk)
+    return current_sha.hexdigest()
 
 
 if __name__ == "__main__":
