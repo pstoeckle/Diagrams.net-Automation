@@ -38,3 +38,8 @@ ENV XVFB_OPTIONS ""
 RUN pip install --upgrade pip
 COPY dist dist
 RUN pip install dist/*.whl
+
+RUN useradd --create-home --shell /bin/bash drawio_user
+ENV HOME=/home/drawio_user
+USER drawio_user
+WORKDIR /home/drawio_user
