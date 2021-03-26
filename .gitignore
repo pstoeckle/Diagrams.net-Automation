@@ -27,3 +27,4 @@ __pycache__
 dist/
 **/cobertura.xml
 **/mypy.xml
+**/flake8.json
