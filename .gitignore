@@ -25,3 +25,5 @@ __pycache__
 .idea
 .vscode
 dist/
+**/cobertura.xml
+**/mypy.xml
