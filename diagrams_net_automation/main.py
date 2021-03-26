@@ -85,7 +85,7 @@ def convert_diagrams(input_directory: str, output_directory: str, draw_io: str) 
     _setup_output_directory(output_directory_path)
     cache_file = input_directory_path.joinpath(CACHE_FILE)
     content = _load_cache(cache_file)
-    files = input_directory_path.iterdir()
+    files = list(input_directory_path.iterdir())
     files = [
         f
         for f in files
