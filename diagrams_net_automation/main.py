@@ -8,7 +8,7 @@ from pathlib import Path as pathlib_Path
 from shutil import rmtree
 from subprocess import call
 from sys import stdout
-from typing import Any, MutableMapping
+from typing import Any, List, MutableMapping
 
 from click import Context, Path, command, echo, group, option
 
@@ -75,8 +75,11 @@ def main_group() -> None:
     type=Path(exists=True, resolve_path=True, dir_okay=False),
     default=DRAW_IO,
 )
+@option("--width", "-w", type=int, multiple=True, default=())
 @main_group.command()
-def convert_diagrams(input_directory: str, output_directory: str, draw_io: str) -> None:
+def convert_diagrams(
+    input_directory: str, output_directory: str, draw_io: str, width: List[int]
+) -> None:
     """
     Converts Draw.io files to PDF and PNG.
     """
@@ -93,7 +96,7 @@ def convert_diagrams(input_directory: str, output_directory: str, draw_io: str) 
         and (f.suffix.casefold() == ".xml" or f.suffix.casefold() == ".drawio")
     ]
     for file in files:
-        _convert_file(content, draw_io, file, output_directory_path)
+        _convert_file(content, draw_io, file, output_directory_path, width)
     with cache_file.open("w") as f_write:
         dump(content, f_write, indent=4)
 
@@ -103,6 +106,7 @@ def _convert_file(
     draw_io: str,
     file: pathlib_Path,
     output_directory_path: pathlib_Path,
+    widths: List[int],
 ) -> None:
     file_hash = hash_file(file)
     if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
@@ -110,6 +114,7 @@ def _convert_file(
         return
     new_pdf_file = output_directory_path.joinpath(file.stem + ".pdf")
     new_png_file = output_directory_path.joinpath(file.stem + ".png")
+    new_jpg_file = output_directory_path.joinpath(file.stem + ".jpg")
     _LOGGER.info(f"Convert {file} to PDF")
     call(
         [
@@ -132,6 +137,43 @@ def _convert_file(
             "--transparent",
         ]
     )
+    _LOGGER.info(f"Convert {file} to JPEG")
+    call(
+        [
+            draw_io,
+            file,
+            "--export",
+            "--output",
+            new_jpg_file,
+            "--transparent",
+        ]
+    )
+    for width in widths:
+        _LOGGER.info(f"Convert {file} to PNG with width {width}")
+        new_width_png_file = output_directory_path.joinpath(f"{file.stem}_{width}.png")
+        call(
+            [
+                draw_io,
+                file,
+                "--export",
+                "--output",
+                new_width_png_file,
+                "--width",
+                str(width),
+                "--transparent",
+            ]
+        )
+        _LOGGER.info(f"Convert {file} to JPEG with width {width}")
+        new_width_jpg_file = output_directory_path.joinpath(f"{file.stem}_{width}.jpg")
+        call(
+            [
+                draw_io,
+                file,
+                "--export",
+                "--output",
+                new_width_jpg_file,
+            ]
+        )
     cache_content[str(file)] = file_hash
 
 
