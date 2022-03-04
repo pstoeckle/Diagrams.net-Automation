@@ -2,116 +2,106 @@
 Convert.
 """
 from hashlib import sha3_256
-from json import dump, load
+from itertools import chain
+from json import dumps, loads
 from logging import INFO, basicConfig, getLogger
-from pathlib import Path as pathlib_Path
-from shutil import rmtree
+from pathlib import Path
 from subprocess import call
-from sys import stdout
-from typing import Any, List, MutableMapping
+from typing import List, MutableMapping
 
-from click import Context, Path, command, echo, group, option
+from tqdm import tqdm
 
 from diagrams_net_automation import __version__
+from typer import Exit, Option, Typer, echo
 
 DRAW_IO = "/Applications/draw.io.app/Contents/MacOS/draw.io"
 
-CACHE_FILE = ".diagrams.net.json"
+CACHE_FILE = Path(".diagrams.net.json")
 
 _LOGGER = getLogger(__name__)
 basicConfig(
     format="%(levelname)s: %(asctime)s: %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     level=INFO,
-    stream=stdout,
+    filename="diagrams-net-automation.log",
+    filemode="w",
 )
 
 
-def _print_version(ctx: Context, _: Any, value: Any) -> None:
+def _version_callback(value: bool) -> None:
+    if value:
+        echo(f"diagrams-net-automation {__version__}")
+        raise Exit()
+
+
+app = Typer()
+
+
+@app.callback()
+def _call_back(
+    _: bool = Option(
+        None,
+        "--version",
+        is_flag=True,
+        callback=_version_callback,
+        expose_value=False,
+        is_eager=True,
+        help="Version",
+    )
+) -> None:
     """
 
-    :param ctx:
-    :param _:
-    :param value:
     :return:
     """
-    if not value or ctx.resilient_parsing:
-        return
-    echo(__version__)
-    ctx.exit()
 
 
-@group()
-@option(
-    "--version",
-    is_flag=True,
-    callback=_print_version,
-    expose_value=False,
-    is_eager=True,
-    help="Version",
-)
-def main_group() -> None:
-    """
-
-    :return:
-    """
-
-
-@option(
-    "--input-directory",
-    "-d",
-    type=Path(exists=True, file_okay=False, resolve_path=True),
-    default=".",
-)
-@option(
-    "--output-directory",
-    "-o",
-    type=Path(file_okay=False, resolve_path=True),
-    default="dist",
-)
-@option(
-    "--draw-io",
-    "-D",
-    type=Path(exists=True, resolve_path=True, dir_okay=False),
-    default=DRAW_IO,
-)
-@option("--width", "-w", type=int, multiple=True, default=())
-@main_group.command()
+@app.command()
 def convert_diagrams(
-    input_directory: str, output_directory: str, draw_io: str, width: List[int]
+    input_directory_path: Path = Option(
+        ".", "--input-directory", "-d", exists=True, file_okay=False, resolve_path=True
+    ),
+    output_directory_path: Path = Option(
+        "dist", "--output-directory", "-o", file_okay=False, resolve_path=True
+    ),
+    draw_io: Path = Option(
+        DRAW_IO, "--draw-io", "-D", exists=True, resolve_path=True, dir_okay=False
+    ),
+    width: List[int] = Option([], "--width", "-w"),
+    include_xml: bool = Option(False, "--include-xml", "-X", is_flag=True),
 ) -> None:
     """
     Converts Draw.io files to PDF and PNG.
     """
-    input_directory_path = pathlib_Path(input_directory)
-    output_directory_path = pathlib_Path(output_directory)
     _setup_output_directory(output_directory_path)
     cache_file = input_directory_path.joinpath(CACHE_FILE)
     content = _load_cache(cache_file)
-    files = list(input_directory_path.iterdir())
-    files = [
-        f
-        for f in files
-        if f.is_file()
-        and (f.suffix.casefold() == ".xml" or f.suffix.casefold() == ".drawio")
-    ]
-    for file in files:
+    files = sorted(
+        list(
+            chain(
+                input_directory_path.glob("**/*.drawio"),
+                input_directory_path.glob("**/*.xml"),
+            )
+            if include_xml
+            else input_directory_path.glob("**/*.drawio")
+        )
+    )
+    for file in tqdm(files):
         _convert_file(content, draw_io, file, output_directory_path, width)
-    with cache_file.open("w") as f_write:
-        dump(content, f_write, indent=4)
+    cache_file.write_text(dumps(content))
 
 
 def _convert_file(
     cache_content: MutableMapping[str, str],
-    draw_io: str,
-    file: pathlib_Path,
-    output_directory_path: pathlib_Path,
+    draw_io: Path,
+    file: Path,
+    output_directory_path: Path,
     widths: List[int],
 ) -> None:
     file_hash = hash_file(file)
     if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
         _LOGGER.info(f"The file {file} has not changed since the last conversion.")
         return
+    echo(f"Converting {file}")
     new_pdf_file = output_directory_path.joinpath(file.stem + ".pdf")
     new_png_file = output_directory_path.joinpath(file.stem + ".png")
     new_jpg_file = output_directory_path.joinpath(file.stem + ".jpg")
@@ -175,24 +165,25 @@ def _convert_file(
             ]
         )
     cache_content[str(file)] = file_hash
+    echo(f"Converting {file}: done!")
 
 
-def _load_cache(cache_file: pathlib_Path) -> MutableMapping[str, str]:
+def _load_cache(cache_file: Path) -> MutableMapping[str, str]:
     content: MutableMapping[str, str]
     if cache_file.is_file():
-        with cache_file.open() as f_read:
-            content = load(f_read)
+        content = loads(cache_file.read_text())
+        return content
     else:
         content = {}
     return content
 
 
-def _setup_output_directory(output_directory_path: pathlib_Path) -> None:
+def _setup_output_directory(output_directory_path: Path) -> None:
     if not output_directory_path.is_dir():
         output_directory_path.mkdir()
 
 
-def hash_file(file: pathlib_Path) -> str:
+def hash_file(file: Path) -> str:
     """
     Tp.
     """
@@ -206,4 +197,4 @@ def hash_file(file: pathlib_Path) -> str:
 
 
 if __name__ == "__main__":
-    main_group()
+    app()
