@@ -1,8 +1,7 @@
 stages:
 - pre-analysis
-- build
+- package
 - deploy
-
 cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
