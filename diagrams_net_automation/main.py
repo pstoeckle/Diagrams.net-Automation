@@ -98,9 +98,9 @@ def _convert_file(
     widths: List[int],
 ) -> None:
     file_hash = hash_file(file)
-    # if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
-    #     _LOGGER.info(f"The file {file} has not changed since the last conversion.")
-    #     return
+    if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
+        _LOGGER.info(f"The file {file} has not changed since the last conversion.")
+        return
     echo(f"Converting {file}")
     output_subdir = output_directory_path.joinpath(file.parent)
     if not output_subdir.is_dir():
