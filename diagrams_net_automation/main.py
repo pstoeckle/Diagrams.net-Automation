@@ -58,7 +58,7 @@ def _call_back(
 @app.command()
 def convert_diagrams(
     input_directory_path: Path = Option(
-        ".", "--input-directory", "-d", exists=True, file_okay=False, resolve_path=True
+        ".", "--input-directory", "-d", exists=True, file_okay=False
     ),
     output_directory_path: Path = Option(
         "dist", "--output-directory", "-o", file_okay=False, resolve_path=True
@@ -98,13 +98,16 @@ def _convert_file(
     widths: List[int],
 ) -> None:
     file_hash = hash_file(file)
-    if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
-        _LOGGER.info(f"The file {file} has not changed since the last conversion.")
-        return
+    # if str(file) in cache_content.keys() and cache_content[str(file)] == file_hash:
+    #     _LOGGER.info(f"The file {file} has not changed since the last conversion.")
+    #     return
     echo(f"Converting {file}")
-    new_pdf_file = output_directory_path.joinpath(file.stem + ".pdf")
-    new_png_file = output_directory_path.joinpath(file.stem + ".png")
-    new_jpg_file = output_directory_path.joinpath(file.stem + ".jpg")
+    output_subdir = output_directory_path.joinpath(file.parent)
+    if not output_subdir.is_dir():
+        output_subdir.mkdir(parents=True)
+    new_pdf_file = output_subdir.joinpath(file.stem + ".pdf")
+    new_png_file = output_subdir.joinpath(file.stem + ".png")
+    new_jpg_file = output_subdir.joinpath(file.stem + ".jpg")
     _LOGGER.info(f"Convert {file} to PDF")
     call(
         [
