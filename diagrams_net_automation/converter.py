@@ -146,7 +146,13 @@ class Converter(object):
             self._cache[str(file)] = file_hash
         echo(f"Converting {file}: done!")
 
-    def update_cache(self) -> None:
+    def clear_cache(self) -> None:
+        """
+        Clears the current cache.
+        """
+        self._cache = {}
+
+    def update_cache_file(self) -> None:
         """
         Store the current cache in the cache file.
         """

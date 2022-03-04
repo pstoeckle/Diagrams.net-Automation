@@ -56,19 +56,63 @@ def _call_back(
 @app.command()
 def convert_diagrams(
     input_directory_path: Path = Option(
-        ".", "--input-directory", "-d", exists=True, file_okay=False
+        ".",
+        "--input-directory",
+        "-d",
+        exists=True,
+        file_okay=False,
+        help="Input directory with the diagrams.net files.",
     ),
     output_directory_path: Path = Option(
-        "dist", "--output-directory", "-o", file_okay=False, resolve_path=True
+        "dist",
+        "--output-directory",
+        "-o",
+        file_okay=False,
+        resolve_path=True,
+        help="The output directory where the PDF, JPG, or PNG files should be stored.",
     ),
     draw_io: Path = Option(
-        DRAW_IO, "--draw-io", "-D", exists=True, resolve_path=True, dir_okay=False
+        DRAW_IO,
+        "--draw-io",
+        "-D",
+        exists=True,
+        resolve_path=True,
+        dir_okay=False,
+        help="The diagrams.net executable.",
     ),
-    width: List[int] = Option([], "--width", "-w"),
-    include_xml: bool = Option(False, "--include-xml", "-X", is_flag=True),
-    create_png: bool = Option(False, "--generate-png", "-P", is_flag=True),
-    create_jpg: bool = Option(False, "--generate-jpg", "-J", is_flag=True),
-    skip_pdf: bool = Option(False, "--skip-pdf-generation", "-S", is_flag=True),
+    width: List[int] = Option(
+        [],
+        "--width",
+        "-w",
+        help="If a width is passed, we will generate a PNG and/or JPG with this width.",
+    ),
+    include_xml: bool = Option(
+        False,
+        "--include-xml",
+        "-X",
+        is_flag=True,
+        help="Convert also .xml files, not only .drawio files.",
+    ),
+    create_png: bool = Option(
+        False, "--generate-png", "-P", is_flag=True, help="Generate PNG files."
+    ),
+    create_jpg: bool = Option(
+        False, "--generate-jpg", "-J", is_flag=True, help="Generate JPG files."
+    ),
+    skip_pdf: bool = Option(
+        False,
+        "--skip-pdf-generation",
+        "-S",
+        is_flag=True,
+        help="If this flag is set, we will not generate PDF files.",
+    ),
+    ignore_cache: bool = Option(
+        False,
+        "--ignore-cache",
+        "-I",
+        is_flag=True,
+        help="If this flag is passed, we will ignore anything in the current cache file. In the end, we will overwrite the current cache file.",
+    ),
 ) -> None:
     """
     Converts Draw.io files to PDF and PNG.
@@ -84,6 +128,9 @@ def convert_diagrams(
         skip_pdf=skip_pdf,
         widths=width,
     )
+    if ignore_cache:
+        converter.clear_cache()
+        echo("We cleared the cache")
     if not create_jpg:
         echo("We will generate no JPGs.")
     if not create_png:
@@ -100,8 +147,10 @@ def convert_diagrams(
             else input_directory_path.glob("**/*.drawio")
         )
     )
+
     for file in tqdm(files):
         converter.convert_file(file)
+    converter.update_cache_file()
 
 
 def _setup_output_directory(output_directory_path: Path) -> None:
