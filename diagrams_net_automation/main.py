@@ -4,8 +4,10 @@ Convert.
 from itertools import chain
 from logging import INFO, basicConfig, getLogger
 from pathlib import Path
+from subprocess import check_call
 from typing import List
 
+from lxml import etree
 from tqdm import tqdm
 
 from diagrams_net_automation import __version__
@@ -53,16 +55,28 @@ def _call_back(
     """
 
 
+_DRAW_IO_OPTION = Option(
+    DRAW_IO,
+    "--draw-io",
+    "-D",
+    exists=True,
+    resolve_path=True,
+    dir_okay=False,
+    help="The diagrams.net executable.",
+)
+_INPUT_DIR_OPTION = Option(
+    ".",
+    "--input-directory",
+    "-d",
+    exists=True,
+    file_okay=False,
+    help="Input directory with the diagrams.net files.",
+)
+
+
 @app.command()
 def convert_diagrams(
-    input_directory_path: Path = Option(
-        ".",
-        "--input-directory",
-        "-d",
-        exists=True,
-        file_okay=False,
-        help="Input directory with the diagrams.net files.",
-    ),
+    input_directory_path: Path = _INPUT_DIR_OPTION,
     output_directory_path: Path = Option(
         "dist",
         "--output-directory",
@@ -71,15 +85,7 @@ def convert_diagrams(
         resolve_path=True,
         help="The output directory where the PDF, JPG, or PNG files should be stored.",
     ),
-    draw_io: Path = Option(
-        DRAW_IO,
-        "--draw-io",
-        "-D",
-        exists=True,
-        resolve_path=True,
-        dir_okay=False,
-        help="The diagrams.net executable.",
-    ),
+    draw_io: Path = _DRAW_IO_OPTION,
     width: List[int] = Option(
         [],
         "--width",
@@ -152,6 +158,49 @@ def convert_diagrams(
         converter.convert_file(file)
     converter.update_cache_file()
 
+
+@app.command()
+def uncompress_all_diagrams(
+    input_directory_path: Path = _INPUT_DIR_OPTION,
+    draw_io: Path = _DRAW_IO_OPTION,
+    inplace: bool = Option(
+        False,
+        "--inplace",
+        "-I",
+        is_flag=True,
+        help="If this flag is set, all files will be rewritten.",
+    ),
+) -> None:
+    """
+    Uncompress all draw.io (diagrams.net) files.
+    """
+    echo("Start file uncompression...")
+    file: Path
+    for file in tqdm(list(input_directory_path.glob("**/*.drawio"))):
+        _LOGGER.info(f"Convert {file}...")
+        log_file_path = Path("draw-io.log")
+        with log_file_path.open('a') as log_file:
+            new_file = str(file) if inplace else file.parent.joinpath(file.stem + ".cleaned.drawio")
+            res = check_call(
+                [
+                    str(draw_io),
+                    "--export",
+                    "--format",
+                    "xml",
+                    "--output",
+                    new_file,
+                    "--uncompressed",
+                    str(file),
+                ],
+                stdout=log_file,
+            )
+            if res != 0:
+                echo(log_file_path.read_text())
+                raise Exit(1)
+        xml = etree.XML(file.read_text())
+        file.write_text(etree.tostring(xml, pretty_print=True).decode())
+        _LOGGER.info(f"Converting {file} done!")
+    echo("Done!")
 
 def _setup_output_directory(output_directory_path: Path) -> None:
     if not output_directory_path.is_dir():
