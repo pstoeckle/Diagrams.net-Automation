@@ -180,7 +180,7 @@ def uncompress_all_diagrams(
         _LOGGER.info(f"Convert {file}...")
         log_file_path = Path("draw-io.log")
         with log_file_path.open('a') as log_file:
-            new_file = str(file) if inplace else file.parent.joinpath(file.stem + ".cleaned.drawio")
+            new_file = str(file) if inplace else str(file.parent.joinpath(file.stem + ".cleaned.drawio"))
             res = check_call(
                 [
                     str(draw_io),
