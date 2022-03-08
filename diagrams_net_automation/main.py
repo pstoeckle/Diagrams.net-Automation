@@ -2,21 +2,24 @@
 Convert.
 """
 from itertools import chain
+from json import dumps, loads
 from logging import INFO, basicConfig, getLogger
 from pathlib import Path
 from subprocess import check_call
-from typing import List
+from typing import List, MutableMapping
 
 from lxml import etree
 from tqdm import tqdm
 
 from diagrams_net_automation import __version__
 from diagrams_net_automation.converter import Converter
+from diagrams_net_automation.utils import hash_file
 from typer import Exit, Option, Typer, echo
 
 DRAW_IO = "/Applications/draw.io.app/Contents/MacOS/draw.io"
 
-CACHE_FILE = Path(".diagrams.net.json")
+_CONVERT_CACHE_FILE = Path(".diagrams.net.json")
+_UNCOMPRESS_CACHE_FILE = Path(".diagrams.net.uncompress.json")
 
 basicConfig(
     format="%(levelname)s: %(asctime)s: %(name)s: %(message)s",
@@ -126,7 +129,7 @@ def convert_diagrams(
     _setup_output_directory(output_directory_path)
 
     converter = Converter(
-        cache_file=input_directory_path.joinpath(CACHE_FILE),
+        cache_file=input_directory_path.joinpath(_CONVERT_CACHE_FILE),
         create_jpg=create_jpg,
         create_png=create_png,
         draw_io=draw_io,
@@ -174,13 +177,27 @@ def uncompress_all_diagrams(
     """
     Uncompress all draw.io (diagrams.net) files.
     """
+    cache: MutableMapping[str, str] = (
+        loads(local_cache_file.read_text())
+        if (local_cache_file := input_directory_path.joinpath(_UNCOMPRESS_CACHE_FILE)).is_file()
+        else {}
+    )
+
     echo("Start file uncompression...")
     file: Path
     for file in tqdm(list(input_directory_path.glob("**/*.drawio"))):
         _LOGGER.info(f"Convert {file}...")
+        new_hash = hash_file(file)
+        if (old_hash := cache.get(str(file))) is not None and new_hash == old_hash:
+            _LOGGER.info(f"The file {file} has the same hash as last time.")
+            continue
         log_file_path = Path("draw-io.log")
-        with log_file_path.open('a') as log_file:
-            new_file = str(file) if inplace else str(file.parent.joinpath(file.stem + ".cleaned.drawio"))
+        with log_file_path.open("a") as log_file:
+            new_file = (
+                str(file)
+                if inplace
+                else str(file.parent.joinpath(file.stem + ".cleaned.drawio"))
+            )
             res = check_call(
                 [
                     str(draw_io),
@@ -199,8 +216,11 @@ def uncompress_all_diagrams(
                 raise Exit(1)
         xml = etree.XML(file.read_text())
         file.write_text(etree.tostring(xml, pretty_print=True).decode())
+        cache[str(file)] = hash_file(file) if inplace else new_hash
         _LOGGER.info(f"Converting {file} done!")
+    local_cache_file.write_text(dumps(cache))
     echo("Done!")
+
 
 def _setup_output_directory(output_directory_path: Path) -> None:
     if not output_directory_path.is_dir():
