@@ -1,14 +1,14 @@
 """
 Converter module.
 """
-from hashlib import sha3_256
 from json import dumps, loads
 from logging import getLogger
 from pathlib import Path
 from subprocess import call
 from typing import MutableMapping, Sequence
 
-from click import echo
+from diagrams_net_automation.utils import hash_file
+from typer import echo
 
 _LOGGER = getLogger(__name__)
 
@@ -157,16 +157,3 @@ class Converter(object):
         Store the current cache in the cache file.
         """
         self.cache_file.write_text(dumps(self._cache))
-
-
-def hash_file(file: Path) -> str:
-    """
-    Tp.
-    """
-    if not file.is_file():
-        return ""
-    current_sha = sha3_256()
-    with file.open("rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            current_sha.update(chunk)
-    return current_sha.hexdigest()
