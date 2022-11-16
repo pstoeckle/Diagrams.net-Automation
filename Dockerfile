@@ -1,20 +1,6 @@
 FROM python:3.9-bullseye
 
-ARG COMMIT=""
-ARG COMMIT_SHORT=""
-ARG BRANCH=""
-ARG TAG=""
-
-LABEL author="Patrick Stöckle <patrick.stoeckle@tum.de>"
-LABEL edu.tum.i4.diagrams-net-automation.commit=${COMMIT}
-LABEL edu.tum.i4.diagrams-net-automation.commit-short=${COMMIT_SHORT}
-LABEL edu.tum.i4.diagrams-net-automation.branch=${BRANCH}
-LABEL edu.tum.i4.diagrams-net-automation.tag=${TAG}
-
-ENV COMMIT=${COMMIT}
-ENV COMMIT_SHORT=${COMMIT_SHORT}
-ENV BRANCH=${BRANCH}
-ENV TAG=${TAG}
+LABEL author="Patrick Stöckle <patrick.stoeckle@posteo.de>"
 
 ENV ELECTRON_DISABLE_SECURITY_WARNINGS "true"
 ENV DRAWIO_DISABLE_UPDATE "true"
@@ -23,9 +9,10 @@ ENV DRAWIO_DESKTOP_EXECUTABLE_PATH "/opt/drawio/drawio"
 ENV DRAWIO_DESKTOP_RUNNER_COMMAND_LINE "/opt/drawio-desktop/runner.sh"
 ENV XVFB_DISPLAY ":42"
 ENV XVFB_OPTIONS ""
-ENV DRAWIO_VERSION "16.5.1"
+ENV DRAWIO_VERSION "20.3.0"
 
-COPY sources.list /etc/apt/sources.list
+ENV PATH="${PATH}:/home/drawio-user/.local/bin"
+ENV HOME=/home/drawio-user
 
 WORKDIR "/opt/drawio-desktop"
 
@@ -60,19 +47,11 @@ RUN set -e \
     && useradd --create-home --shell /bin/zsh drawio-user
 
 WORKDIR /home/drawio-user
-
-COPY dist dist
-
-RUN chown drawio-user dist
-
 USER drawio-user
 
-RUN pip install --no-cache-dir --upgrade pip==21.3.1 \
+COPY --chown=drawio-user dist dist
+
+RUN pip install --no-cache-dir --upgrade pip==22.3.1 \
     && pip install --no-cache-dir dist/*.whl \
-    && rm -rf dist
-
-ENV PATH="${PATH}:/home/drawio-user/.local/bin"
-ENV HOME=/home/drawio-user
-
-RUN diagrams-net-automation --version
-
+    && rm -rf dist \
+    && diagrams-net-automation --version
