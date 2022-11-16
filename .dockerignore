@@ -1,0 +1,24 @@
+# Common
+README.md
+CHANGELOG.md
+docker-compose.yml
+Dockerfile
+
+# git
+.git
+.gitattributes
+.gitignore
+
+# CI/CD
+.gitlab-ci.yml
+.github
+
+# JetBrains
+.idea
+
+# Python
+.mypy_cache
+
+
+# Project
+diagrams_net_automation
