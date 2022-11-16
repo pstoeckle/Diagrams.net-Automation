@@ -12,6 +12,6 @@ except DistributionNotFound:
     __version__ = "unknown"
 finally:
     del get_distribution, DistributionNotFound
-__author__ = "Patrick Stoeckle"
-__copyright__ = "Patrick Stoeckle"
-__license__ = "mit"
+__author__ = "Patrick Stöckle"
+__copyright__ = "Patrick Stöckle"
+__license__ = "Apache-2.0"
