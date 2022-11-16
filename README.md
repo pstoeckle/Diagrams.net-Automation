@@ -1,6 +1,6 @@
 # Diagrams.net Automation
 
-[[_TOC_]]
+Scripts to automatically covert [diagrams.net](https://www.diagrams.net/) (former [draw.io](https://draw.io)) files, e.g., to PDF.
 
 ## Usage
 
