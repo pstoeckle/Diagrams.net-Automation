@@ -11,6 +11,7 @@ pip install diagrams-net-automation
 ## Usage
 
 ```shell
+$ diagrams-net-automation --help
 Usage: diagrams-net-automation [OPTIONS] COMMAND [ARGS]...
 
   :return:
@@ -26,6 +27,7 @@ Commands:
 ### Convert Diagrams
 
 ```shell
+$ diagrams-net-automation convert-diagrams --help
 Usage: diagrams-net-automation convert-diagrams [OPTIONS]
 
   Converts Draw.io files to PDF and PNG.
