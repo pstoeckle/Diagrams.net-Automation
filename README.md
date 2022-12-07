@@ -2,9 +2,15 @@
 
 Scripts to automatically covert [diagrams.net](https://www.diagrams.net/) (former [draw.io](https://draw.io)) files, e.g., to PDF.
 
+## Installation
+
+```shell
+pip install diagrams-net-automation
+```
+
 ## Usage
 
-```bash
+```shell
 Usage: diagrams-net-automation [OPTIONS] COMMAND [ARGS]...
 
   :return:
@@ -19,7 +25,7 @@ Commands:
 
 ### Convert Diagrams
 
-```bash
+```shell
 Usage: diagrams-net-automation convert-diagrams [OPTIONS]
 
   Converts Draw.io files to PDF and PNG.
